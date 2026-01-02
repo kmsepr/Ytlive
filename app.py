@@ -87,15 +87,19 @@ COOKIES_FILE = "/mnt/data/cookies.txt"
 # -----------------------
 def get_youtube_live_url(youtube_url: str):
     try:
-        cmd = ["yt-dlp", "-f", "best[height<=360]", "-g", youtube_url]
-        if os.path.exists(COOKIES_FILE):
-            cmd.insert(1, "--cookies")
-            cmd.insert(2, COOKIES_FILE)
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        cmd = [
+            "yt-dlp",
+            "-f", "best[height<=360]",
+            "--cookies-from-browser", "chrome",
+            "--no-playlist",
+            "-g",
+            youtube_url
+        ]
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=20)
         if result.returncode == 0 and result.stdout.strip():
             return result.stdout.strip()
-    except Exception:
-        pass
+    except Exception as e:
+        logging.error(f"yt-dlp error: {e}")
     return None
 
 # -----------------------
