@@ -63,7 +63,7 @@ def refresh_stream_urls():
                 else:
                     logging.warning(f"❌ Failed to update {name}")
 
-        time.sleep(60)  # Check every minute
+        time.sleep(600)  # Check every minute
 
 # Start background thread
 threading.Thread(target=refresh_stream_urls, daemon=True).start()
