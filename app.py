@@ -11,24 +11,18 @@ app = Flask(__name__)
 # TV Streams (direct m3u8)
 # -----------------------
 TV_STREAMS = {
-"kairali_we": "https://cdn-3.pishow.tv/live/1530/master.m3u8",
-
-"amrita_tv": "https://ddash74r36xqp.cloudfront.net/master.m3u8",
-
-"mazhavil_manorama": "https://yuppmedtaorire.akamaized.net/v1/master/a0d007312bfd99c47f76b77ae26b1ccdaae76cb1/mazhavilmanorama_nim_https/050522/mazhavilmanorama/playlist.m3u8",
-
-    "victers_tv": "https://932y4x26ljv8-hls-live.5centscdn.com/victers/tv.stream/chunks.m3u8",
-
     "safari_tv": "https://j78dp346yq5r-hls-live.5centscdn.com/safari/live.stream/chunks.m3u8",
     "dd_sports": "https://cdn-6.pishow.tv/live/13/master.m3u8",
     "dd_malayalam": "https://d3eyhgoylams0m.cloudfront.net/v1/manifest/93ce20f0f52760bf38be911ff4c91ed02aa2fd92/ed7bd2c7-8d10-4051-b397-2f6b90f99acb/562ee8f9-9950-48a0-ba1d-effa00cf0478/2.m3u8",
-
+    "mazhavil_manorama": "https://yuppmedtaorire.akamaized.net/v1/master/a0d007312bfd99c47f76b77ae26b1ccdaae76cb1/mazhavilmanorama_nim_https/050522/mazhavilmanorama/playlist.m3u8",
+    "victers_tv": "https://932y4x26ljv8-hls-live.5centscdn.com/victers/tv.stream/chunks.m3u8",
     "bloomberg_tv": "https://bloomberg-bloomberg-3-br.samsung.wurl.tv/manifest/playlist.m3u8",
     "france_24": "https://live.france24.com/hls/live/2037218/F24_EN_HI_HLS/master_500.m3u8",
     "aqsa_tv": "http://167.172.161.13/hls/feedspare/6udfi7v8a3eof6nlps6e9ovfrs65c7l7.m3u8",
     "mult": "http://stv.mediacdn.ru/live/cdn/mult/playlist.m3u8",
     "yemen_today": "https://video.yementdy.tv/hls/yementoday.m3u8",
-
+    "yemen_shabab": "https://starmenajo.com/hls/yemenshabab/index.m3u8",
+    "al_sahat": "https://assahat.b-cdn.net/Assahat/assahatobs/index.m3u8",
 }
 
 # -----------------------
@@ -40,11 +34,12 @@ YOUTUBE_STREAMS = {
     "qsc_mukkam": "https://www.youtube.com/c/quranstudycentremukkam/live",
     "valiyudheen_faizy": "https://www.youtube.com/@voiceofvaliyudheenfaizy600/live",
     "skicr_tv": "https://www.youtube.com/@SKICRTV/live",
-    "asianet_news": "https://www.youtube.com/@asianetnews/live",
-
+    "yaqeen_institute": "https://www.youtube.com/@yaqeeninstituteofficial/live",
+    "bayyinah_tv": "https://www.youtube.com/@bayyinah/live",
     "eft_guru": "https://www.youtube.com/@EFTGuru-ql8dk/live",
     "unacademy_ias": "https://www.youtube.com/@UnacademyIASEnglish/live",
-
+    "studyiq_hindi": "https://www.youtube.com/@StudyIQEducationLtd/live",
+    "aljazeera_arabic": "https://www.youtube.com/@aljazeera/live",
     "aljazeera_english": "https://www.youtube.com/@AlJazeeraEnglish/live",
     "entri_degree": "https://www.youtube.com/@EntriDegreeLevelExams/live",
     "xylem_psc": "https://www.youtube.com/@XylemPSC/live",
@@ -52,17 +47,14 @@ YOUTUBE_STREAMS = {
     "entri_app": "https://www.youtube.com/@entriapp/live",
     "entri_ias": "https://www.youtube.com/@EntriIAS/live",
     "studyiq_english": "https://www.youtube.com/@studyiqiasenglish/live",
-
-
+    "voice_rahmani": "https://www.youtube.com/@voiceofrahmaniyya5828/live",
+    "kas_ranker": "https://www.youtube.com/@freepscclasses/live",
 }
 
 # -----------------------
 # Channel Logos
 # -----------------------
 CHANNEL_LOGOS = {
-"kairali_we": "https://i.imgur.com/zXpROBj.png",
-"mazhavil_manorama": "https://i.imgur.com/fjgzW20.png",
-"amrita_tv": "https://i.imgur.com/WdSjlPl.png",
     "safari_tv": "https://i.imgur.com/dSOfYyh.png",
     "victers_tv": "https://i.imgur.com/kj4OEsb.png",
     "bloomberg_tv": "https://i.imgur.com/OuogLHx.png",
@@ -78,8 +70,8 @@ CHANNEL_LOGOS = {
     **{k: "https://upload.wikimedia.org/wikipedia/commons/b/b8/YouTube_Logo_2017.svg" for k in YOUTUBE_STREAMS}
 }
 
-CACHE = {}
-LIVE_STATUS = {}
+CACHE = {}        # Cached YouTube direct HLS URLs
+LIVE_STATUS = {}  # Live status
 COOKIES_FILE = "/mnt/data/cookies.txt"
 
 # -----------------------
@@ -116,7 +108,7 @@ def refresh_stream_urls():
 threading.Thread(target=refresh_stream_urls, daemon=True).start()
 
 # -----------------------
-# Home Page (with visible tabs)
+# Flask Routes
 # -----------------------
 @app.route("/")
 def home():
@@ -129,12 +121,10 @@ def home():
 <title>📺 TV & YouTube Live</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
-body { font-family:sans-serif; background:#111; color:#fff; margin:0; padding:0; }
-h2 { text-align:center; margin:10px 0; }
-.tabs { display:flex; justify-content:center; background:#000; padding:10px; }
-.tab { padding:10px 20px; cursor:pointer; background:#222; color:#0ff; border-radius:10px; margin:0 5px; transition:0.2s; }
-.tab.active { background:#0ff; color:#000; }
-.grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(120px,1fr)); gap:12px; padding:10px; }
+body { font-family:sans-serif; background:#111; color:#fff; margin:0; padding:20px; }
+h2 { text-align:center; margin-bottom:10px; }
+.mode { text-align:center; color:#0ff; margin-bottom:10px; font-size:18px; }
+.grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(120px,1fr)); gap:12px; }
 .card { background:#222; border-radius:10px; padding:10px; text-align:center; transition:0.2s; }
 .card:hover { background:#333; }
 .card img { width:100%; height:80px; object-fit:contain; margin-bottom:8px; }
@@ -142,29 +132,37 @@ h2 { text-align:center; margin:10px 0; }
 .hidden { display:none; }
 </style>
 <script>
+let currentTab="tv";
 function showTab(tab){
-  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-  document.querySelectorAll('.grid').forEach(g=>g.classList.add('hidden'));
-  document.getElementById(tab).classList.remove('hidden');
-  document.getElementById('tab_'+tab).classList.add('active');
+  document.getElementById("tv").classList.add("hidden");
+  document.getElementById("youtube").classList.add("hidden");
+  document.getElementById(tab).classList.remove("hidden");
+  document.getElementById("mode").innerText=(tab==="tv"?"📺 TV Mode":"▶ YouTube Mode");
+  currentTab=tab;
 }
-window.onload=()=>showTab('tv');
+document.addEventListener("keydown",function(e){
+  if(e.key==="#"){showTab(currentTab==="tv"?"youtube":"tv");}
+  else if(!isNaN(e.key)){
+    let grid=document.getElementById(currentTab);
+    let links=grid.querySelectorAll("a[data-index]");
+    if(e.key==="0"){let r=Math.floor(Math.random()*links.length);if(links[r])window.location.href=links[r].href;}
+    else{let i=parseInt(e.key)-1;if(i>=0&&i<links.length)window.location.href=links[i].href;}
+  }
+});
+window.onload=()=>showTab("tv");
 </script>
 </head>
 <body>
-<div class="tabs">
-  <div class="tab active" id="tab_tv" onclick="showTab('tv')">📺 TV</div>
-  <div class="tab" id="tab_youtube" onclick="showTab('youtube')">▶ YouTube</div>
-</div>
+<h2>📺 Live Channels</h2>
+<div id="mode" class="mode">📺 TV Mode</div>
 
 <div id="tv" class="grid">
 {% for key in tv_channels %}
 <div class="card">
+  <a href="/watch/{{ key }}" data-index="{{ loop.index0 }}">
     <img src="{{ logos.get(key) }}">
-    <span>{{ key.replace('_',' ').title() }}</span><br>
-    <a href="/watch/{{ key }}" style="color:#0ff;">▶ Watch</a> |
-<a href="/video/{{ key }}" style="color:#f80;">🎥 Low</a> |
-<a href="/audio/{{ key }}" style="color:#ff0;">🎵 Audio</a>
+    <span>[{{ loop.index }}] {{ key.replace('_',' ').title() }}</span>
+  </a>
 </div>
 {% endfor %}
 </div>
@@ -172,20 +170,19 @@ window.onload=()=>showTab('tv');
 <div id="youtube" class="grid hidden">
 {% for key in youtube_channels %}
 <div class="card">
+  <a href="/watch/{{ key }}" data-index="{{ loop.index0 }}">
     <img src="{{ logos.get(key) }}">
-    <span>{{ key.replace('_',' ').title() }}</span><br>
-    <a href="/watch/{{ key }}" style="color:#0ff;">▶ Watch</a> |
-    <a href="/audio/{{ key }}" style="color:#ff0;">🎵 Audio</a>
+    <span>[{{ loop.index }}] {{ key.replace('_',' ').title() }}</span>
+  </a>
 </div>
 {% endfor %}
 </div>
 </body>
-</html>
-"""
+</html>"""
     return render_template_string(html, tv_channels=tv_channels, youtube_channels=live_youtube, logos=CHANNEL_LOGOS)
 
 # -----------------------
-# Watch Route
+# Watch Route (HLS.js Player)
 # -----------------------
 @app.route("/watch/<channel>")
 def watch(channel):
@@ -249,150 +246,24 @@ document.addEventListener("keydown", function(e) {{
     return html
 
 # -----------------------
-# Proxy Stream
+# Proxy Stream (YouTube)
 # -----------------------
 @app.route("/stream/<channel>")
 def stream(channel):
-    url = TV_STREAMS.get(channel) or CACHE.get(channel)
+    url = CACHE.get(channel)
     if not url:
         return "Channel not ready", 503
 
-    cmd = [
-        "ffmpeg",
-        "-i", url,
-        "-vf", "scale=256:144",   # 160p resolution
-        "-r", "15",                # low frame rate
-        "-c:v", "libx264",
-        "-preset", "ultrafast",
-        "-tune", "zerolatency",
-        "-b:v", "40k",            # very low video bitrate
-        "-maxrate", "40k",
-        "-bufsize", "240k",
-        "-g", "30",
-        "-c:a", "aac",
-        "-b:a", "16k",             # low bitrate audio
-        "-ac", "1",                # mono
-        "-f", "mpegts",
-        "pipe:1"
-    ]
+    headers = {"User-Agent": "Mozilla/5.0", "Accept": "*/*"}
+    try:
+        r = requests.get(url, headers=headers, timeout=10)
+        r.raise_for_status()
+    except Exception as e:
+        return f"Error fetching stream: {e}", 502
 
-    def generate():
-        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
-        try:
-            while True:
-                chunk = proc.stdout.read(1024)
-                if not chunk:
-                    break
-                yield chunk
-        finally:
-            proc.terminate()
+    content_type = r.headers.get("Content-Type", "application/vnd.apple.mpegurl")
+    return Response(r.content, content_type=content_type)
 
-    return Response(generate(), mimetype="video/mp2t")
-
-@app.route("/video/<channel>")
-def video_player(channel):
-    if channel not in TV_STREAMS and channel not in CACHE:
-        abort(404)
-
-    return f"""
-<!DOCTYPE html>
-<html>
-<head>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>{channel.replace('_',' ').title()}</title>
-<style>
-body {{ margin:0; background:#000; height:100vh; display:flex; justify-content:center; align-items:center; }}
-video {{ width:100%; height:100%; background:#000; }}
-</style>
-</head>
-<body>
-<video id="v" autoplay controls playsinline></video>
-<script>
-const video = document.getElementById("v");
-video.src = "/stream/{channel}";
-video.play().catch(e => console.log("Playback prevented:", e));
-</script>
-</body>
-</html>
-"""
-@app.route("/audio/<channel>")
-def audio_only(channel):
-    url = TV_STREAMS.get(channel) or CACHE.get(channel)
-    if not url:
-        return "Channel not ready", 503
-
-    def generate():
-        cmd = [
-            "ffmpeg",
-            "-loglevel", "error",
-
-            # reconnect if source drops
-            "-reconnect", "1",
-            "-reconnect_streamed", "1",
-            "-reconnect_delay_max", "5",
-            "-timeout", "15000000",
-            "-user_agent", "Mozilla",
-
-            "-i", url,
-
-            # audio only
-            "-vn",
-            "-ac", "1",                 # mono
-            "-ar", "44100",              # IMPORTANT (avoid AM sound)
-            "-c:a", "aac",
-            "-profile:a", "aac_low",
-            "-b:a", "40k",
-
-            # speech clarity
-            "-af", "highpass=f=100,lowpass=f=8000",
-
-            # low latency but stable
-            "-fflags", "nobuffer",
-            "-flags", "low_delay",
-            "-flush_packets", "1",
-
-            "-f", "adts",
-            "pipe:1"
-        ]
-
-        while True:  # 🔁 auto-restart ffmpeg
-            proc = subprocess.Popen(
-                cmd,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.DEVNULL,
-                bufsize=0
-            )
-
-            try:
-                while True:
-                    data = proc.stdout.read(4096)
-
-                    if data:
-                        yield data
-                    else:
-                        # ⚠️ do NOT exit on short stream gaps
-                        time.sleep(0.1)
-
-                    if proc.poll() is not None:
-                        break
-
-            except GeneratorExit:
-                proc.kill()
-                break
-            finally:
-                proc.kill()
-
-            time.sleep(1)  # small delay before reconnect
-
-    return Response(
-        generate(),
-        mimetype="audio/aac",
-        headers={
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
-            "Accept-Ranges": "none"
-        }
-    )
 # -----------------------
 # Run Server
 # -----------------------
