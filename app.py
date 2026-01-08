@@ -16,7 +16,7 @@ TV_STREAMS = {
     "dd_malayalam": "https://d3eyhgoylams0m.cloudfront.net/v1/manifest/93ce20f0f52760bf38be911ff4c91ed02aa2fd92/ed7bd2c7-8d10-4051-b397-2f6b90f99acb/562ee8f9-9950-48a0-ba1d-effa00cf0478/2.m3u8",
     "mazhavil_manorama": "https://yuppmedtaorire.akamaized.net/v1/master/a0d007312bfd99c47f76b77ae26b1ccdaae76cb1/mazhavilmanorama_nim_https/050522/mazhavilmanorama/playlist.m3u8",
     "victers_tv": "https://932y4x26ljv8-hls-live.5centscdn.com/victers/tv.stream/chunks.m3u8",
-    "bloomberg_tv": "https://bloomberg-bloomberg-3-br.samsung.wurl.tv/manifest/playlist.m3u8",
+    "bloomberg_tv": "https://bloomberg.com/media-manifest/streams/us.m3u8",
     "france_24": "https://live.france24.com/hls/live/2037218/F24_EN_HI_HLS/master_500.m3u8",
     "aqsa_tv": "http://167.172.161.13/hls/feedspare/6udfi7v8a3eof6nlps6e9ovfrs65c7l7.m3u8",
     "mult": "http://stv.mediacdn.ru/live/cdn/mult/playlist.m3u8",
@@ -30,19 +30,25 @@ TV_STREAMS = {
 # -----------------------
 YOUTUBE_STREAMS = {
     "media_one": "https://www.youtube.com/@MediaoneTVLive/live",
-    "asianet_news": "https://www.youtube.com/@asianetnews/live",
     "shajahan_rahmani": "https://www.youtube.com/@ShajahanRahmaniOfficial/live",
-    
+    "qsc_mukkam": "https://www.youtube.com/c/quranstudycentremukkam/live",
     "valiyudheen_faizy": "https://www.youtube.com/@voiceofvaliyudheenfaizy600/live",
     "skicr_tv": "https://www.youtube.com/@SKICRTV/live",
-   
+    "yaqeen_institute": "https://www.youtube.com/@yaqeeninstituteofficial/live",
+    "bayyinah_tv": "https://www.youtube.com/@bayyinah/live",
+    "eft_guru": "https://www.youtube.com/@EFTGuru-ql8dk/live",
     "unacademy_ias": "https://www.youtube.com/@UnacademyIASEnglish/live",
-    
+    "studyiq_hindi": "https://www.youtube.com/@StudyIQEducationLtd/live",
+    "aljazeera_arabic": "https://www.youtube.com/@aljazeera/live",
     "aljazeera_english": "https://www.youtube.com/@AlJazeeraEnglish/live",
     "entri_degree": "https://www.youtube.com/@EntriDegreeLevelExams/live",
-    
+    "xylem_psc": "https://www.youtube.com/@XylemPSC/live",
+    "xylem_sslc": "https://www.youtube.com/@XylemSSLC2023/live",
+    "entri_app": "https://www.youtube.com/@entriapp/live",
+    "entri_ias": "https://www.youtube.com/@EntriIAS/live",
     "studyiq_english": "https://www.youtube.com/@studyiqiasenglish/live",
-    
+    "voice_rahmani": "https://www.youtube.com/@voiceofrahmaniyya5828/live",
+    "kas_ranker": "https://www.youtube.com/@freepscclasses/live",
 }
 
 # -----------------------
@@ -64,8 +70,8 @@ CHANNEL_LOGOS = {
     **{k: "https://upload.wikimedia.org/wikipedia/commons/b/b8/YouTube_Logo_2017.svg" for k in YOUTUBE_STREAMS}
 }
 
-CACHE = {}        # Cached YouTube direct HLS URLs
-LIVE_STATUS = {}  # Live status
+CACHE = {}
+LIVE_STATUS = {}
 COOKIES_FILE = "/mnt/data/cookies.txt"
 
 # -----------------------
@@ -102,7 +108,7 @@ def refresh_stream_urls():
 threading.Thread(target=refresh_stream_urls, daemon=True).start()
 
 # -----------------------
-# Flask Routes
+# Home Page (with visible tabs)
 # -----------------------
 @app.route("/")
 def home():
@@ -115,10 +121,12 @@ def home():
 <title>📺 TV & YouTube Live</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
-body { font-family:sans-serif; background:#111; color:#fff; margin:0; padding:20px; }
-h2 { text-align:center; margin-bottom:10px; }
-.mode { text-align:center; color:#0ff; margin-bottom:10px; font-size:18px; }
-.grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(120px,1fr)); gap:12px; }
+body { font-family:sans-serif; background:#111; color:#fff; margin:0; padding:0; }
+h2 { text-align:center; margin:10px 0; }
+.tabs { display:flex; justify-content:center; background:#000; padding:10px; }
+.tab { padding:10px 20px; cursor:pointer; background:#222; color:#0ff; border-radius:10px; margin:0 5px; transition:0.2s; }
+.tab.active { background:#0ff; color:#000; }
+.grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(120px,1fr)); gap:12px; padding:10px; }
 .card { background:#222; border-radius:10px; padding:10px; text-align:center; transition:0.2s; }
 .card:hover { background:#333; }
 .card img { width:100%; height:80px; object-fit:contain; margin-bottom:8px; }
@@ -126,37 +134,28 @@ h2 { text-align:center; margin-bottom:10px; }
 .hidden { display:none; }
 </style>
 <script>
-let currentTab="tv";
 function showTab(tab){
-  document.getElementById("tv").classList.add("hidden");
-  document.getElementById("youtube").classList.add("hidden");
-  document.getElementById(tab).classList.remove("hidden");
-  document.getElementById("mode").innerText=(tab==="tv"?"📺 TV Mode":"▶ YouTube Mode");
-  currentTab=tab;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.grid').forEach(g=>g.classList.add('hidden'));
+  document.getElementById(tab).classList.remove('hidden');
+  document.getElementById('tab_'+tab).classList.add('active');
 }
-document.addEventListener("keydown",function(e){
-  if(e.key==="#"){showTab(currentTab==="tv"?"youtube":"tv");}
-  else if(!isNaN(e.key)){
-    let grid=document.getElementById(currentTab);
-    let links=grid.querySelectorAll("a[data-index]");
-    if(e.key==="0"){let r=Math.floor(Math.random()*links.length);if(links[r])window.location.href=links[r].href;}
-    else{let i=parseInt(e.key)-1;if(i>=0&&i<links.length)window.location.href=links[i].href;}
-  }
-});
-window.onload=()=>showTab("tv");
+window.onload=()=>showTab('tv');
 </script>
 </head>
 <body>
-<h2>📺 Live Channels</h2>
-<div id="mode" class="mode">📺 TV Mode</div>
+<div class="tabs">
+  <div class="tab active" id="tab_tv" onclick="showTab('tv')">📺 TV</div>
+  <div class="tab" id="tab_youtube" onclick="showTab('youtube')">▶ YouTube</div>
+</div>
 
 <div id="tv" class="grid">
 {% for key in tv_channels %}
 <div class="card">
-  <a href="/watch/{{ key }}" data-index="{{ loop.index0 }}">
     <img src="{{ logos.get(key) }}">
-    <span>[{{ loop.index }}] {{ key.replace('_',' ').title() }}</span>
-  </a>
+    <span>{{ key.replace('_',' ').title() }}</span><br>
+    <a href="/watch/{{ key }}" style="color:#0ff;">▶ Watch</a> |
+    <a href="/audio/{{ key }}" style="color:#ff0;">🎵 Audio</a>
 </div>
 {% endfor %}
 </div>
@@ -164,19 +163,20 @@ window.onload=()=>showTab("tv");
 <div id="youtube" class="grid hidden">
 {% for key in youtube_channels %}
 <div class="card">
-  <a href="/watch/{{ key }}" data-index="{{ loop.index0 }}">
     <img src="{{ logos.get(key) }}">
-    <span>[{{ loop.index }}] {{ key.replace('_',' ').title() }}</span>
-  </a>
+    <span>{{ key.replace('_',' ').title() }}</span><br>
+    <a href="/watch/{{ key }}" style="color:#0ff;">▶ Watch</a> |
+    <a href="/audio/{{ key }}" style="color:#ff0;">🎵 Audio</a>
 </div>
 {% endfor %}
 </div>
 </body>
-</html>"""
+</html>
+"""
     return render_template_string(html, tv_channels=tv_channels, youtube_channels=live_youtube, logos=CHANNEL_LOGOS)
 
 # -----------------------
-# Watch Route (HLS.js Player)
+# Watch Route
 # -----------------------
 @app.route("/watch/<channel>")
 def watch(channel):
@@ -240,7 +240,7 @@ document.addEventListener("keydown", function(e) {{
     return html
 
 # -----------------------
-# Proxy Stream (YouTube)
+# Proxy Stream
 # -----------------------
 @app.route("/stream/<channel>")
 def stream(channel):
@@ -257,6 +257,39 @@ def stream(channel):
 
     content_type = r.headers.get("Content-Type", "application/vnd.apple.mpegurl")
     return Response(r.content, content_type=content_type)
+
+@app.route("/audio/<channel>")
+def audio_only(channel):
+    url = TV_STREAMS.get(channel) or CACHE.get(channel)
+    if not url:
+        return "Channel not ready", 503
+
+    filename = f"{channel}.mp3"
+
+    def generate():
+        cmd = [
+            "ffmpeg", "-i", url,
+            "-vn",               # no video
+            "-ac", "1",          # mono
+            "-b:a", "40k",       # 40kbps
+            "-f", "mp3",
+            "pipe:1"
+        ]
+        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+        try:
+            while True:
+                data = proc.stdout.read(1024)
+                if not data:
+                    break
+                yield data
+        finally:
+            proc.terminate()
+
+    return Response(
+        generate(),
+        mimetype="audio/mpeg",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+    )
 
 # -----------------------
 # Run Server
