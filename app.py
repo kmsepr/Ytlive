@@ -37,7 +37,7 @@ YOUTUBE_STREAMS = {
     "entri_app": "https://www.youtube.com/@entriapp/live",
     "entri_ias": "https://www.youtube.com/@EntriIAS/live",
     "studyiq_english": "https://www.youtube.com/@studyiqiasenglish/live",
-
+}
     
 # -------------------------------------------------
 # 🌐 Cache for direct stream URLs
