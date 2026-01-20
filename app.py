@@ -156,6 +156,31 @@ def stream(station_name):
 
     return Response(generate_stream(url), mimetype="audio/mpeg")
 
+
+@app.route("/")
+def home():
+    html = """
+    <html>
+    <head>
+        <title>Live Audio Streams</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <style>
+            body { font-family: Arial; background: #111; color: #fff; text-align: center; }
+            a { display: block; padding: 12px; margin: 8px; background: #222; color: #0f0; 
+                text-decoration: none; border-radius: 8px; }
+            a:hover { background: #333; }
+        </style>
+    </head>
+    <body>
+        <h2>📻 Live Audio Streams</h2>
+    """
+    
+    for name in YOUTUBE_STREAMS:
+        html += f'<a href="/{name}">{name.replace("_"," ").title()}</a>'
+
+    html += "</body></html>"
+    return html
+
 # -------------------------------------------------
 # Run Server
 # -------------------------------------------------
