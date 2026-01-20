@@ -1,146 +1,94 @@
 import time
 import threading
+import os
 import logging
-from flask import Flask, Response, render_template_string, abort
-import subprocess, os
+import subprocess
+from flask import Flask, Response
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
-app = Flask(__name__)
+Configure logging
 
-# -----------------------
-# TV Streams
-# -----------------------
-TV_STREAMS = {
-    "kairali_we": "https://cdn-3.pishow.tv/live/1530/master.m3u8",
-    "amrita_tv": "https://ddash74r36xqp.cloudfront.net/master.m3u8",
-    "mazhavil_manorama": "https://yuppmedtaorire.akamaized.net/v1/master/a0d007312bfd99c47f76b77ae26b1ccdaae76cb1/mazhavilmanorama_nim_https/050522/mazhavilmanorama/playlist.m3u8",
-    "victers_tv": "https://932y4x26ljv8-hls-live.5centscdn.com/victers/tv.stream/chunks.m3u8",
-    "safari_tv": "https://j78dp346yq5r-hls-live.5centscdn.com/safari/live.stream/chunks.m3u8",
-    "dd_sports": "https://cdn-6.pishow.tv/live/13/master.m3u8",
-    "dd_malayalam": "https://d3eyhgoylams0m.cloudfront.net/v1/manifest/93ce20f0f52760bf38be911ff4c91ed02aa2fd92/ed7bd2c7-8d10-4051-b397-2f6b90f99acb/562ee8f9-9950-48a0-ba1d-effa00cf0478/2.m3u8",
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s') app = Flask(name)
+
+📡 List of YouTube Live Streams
+
+YOUTUBE_STREAMS = { "media_one": "https://www.youtube.com/@MediaoneTVLive/live", "shajahan_rahmani": "https://www.youtube.com/@ShajahanRahmaniOfficial/live", "qsc_mukkam": "https://www.youtube.com/c/quranstudycentremukkam/live", "valiyudheen_faizy": "https://www.youtube.com/@voiceofvaliyudheenfaizy600/live", "skicr_tv": "https://www.youtube.com/@SKICRTV/live", "yaqeen_institute": "https://www.youtube.com/@yaqeeninstituteofficial/live", "bayyinah_tv": "https://www.youtube.com/@bayyinah/live", "eft_guru": "https://www.youtube.com/@EFTGuru-ql8dk/live", "unacademy_ias": "https://www.youtube.com/@UnacademyIASEnglish/live",
+"studyiq_hindi": "https://www.youtube.com/@StudyIQEducationLtd/live",
+"aljazeera_arabic": "https://www.youtube.com/@aljazeera/live",
+"aljazeera_english": "https://www.youtube.com/@AlJazeeraEnglish/live", "entri_degree": "https://www.youtube.com/@EntriDegreeLevelExams/live", "xylem_psc": "https://www.youtube.com/@XylemPSC/live", "xylem_sslc": "https://www.youtube.com/@XylemSSLC2023/live", "entri_app": "https://www.youtube.com/@entriapp/live", "entri_ias": "https://www.youtube.com/@EntriIAS/live", "studyiq_english": "https://www.youtube.com/@studyiqiasenglish/live",
+
+# Malayalam full movie channels/playlists
+
+"movie_kalyanaraman": "https://www.youtube.com/watch?v=e_bMbcZt9b4"
+
 }
 
-# -----------------------
-# YouTube Channels
-# -----------------------
-YOUTUBE_STREAMS = {
-    "asianet_news": "https://www.youtube.com/@asianetnews/live",
-    "media_one": "https://www.youtube.com/@MediaoneTVLive/live",
-    "xylem_psc": "https://www.youtube.com/@XylemPSC/live",
-}
-
-# -----------------------
-# Logos
-# -----------------------
-CHANNEL_LOGOS = {
-    **{k: "https://upload.wikimedia.org/wikipedia/commons/b/b8/YouTube_Logo_2017.svg" for k in YOUTUBE_STREAMS},
-    "kairali_we": "https://i.imgur.com/zXpROBj.png",
-    "amrita_tv": "https://i.imgur.com/WdSjlPl.png",
-    "mazhavil_manorama": "https://i.imgur.com/fjgzW20.png",
-    "victers_tv": "https://i.imgur.com/kj4OEsb.png",
-    "safari_tv": "https://i.imgur.com/dSOfYyh.png",
-    "dd_sports": "https://i.imgur.com/J2Ky5OO.png",
-    "dd_malayalam": "https://i.imgur.com/ywm2dTl.png",
-}
+🌐 Cache for storing direct stream URLs
 
 CACHE = {}
-LIVE_STATUS = {}
 
-# -----------------------
-# YouTube extractor
-# -----------------------
-def get_youtube_live_url(url):
-    try:
-        cmd = [
-            "yt-dlp",
-            "--no-warnings",
-            "--live-from-start",
-            "-f", "best[protocol=m3u8]",
-            "-g",
-            url
-        ]
-        r = subprocess.run(cmd, capture_output=True, text=True, timeout=20)
-        if r.returncode == 0 and r.stdout.strip():
-            return r.stdout.strip()
-    except:
-        pass
+def get_youtube_audio_url(youtube_url): """Extracts direct audio stream URL from YouTube Live.""" try: command = ["/usr/local/bin/yt-dlp", "-f", "91", "-g", youtube_url]
+
+if os.path.exists("/mnt/data/cookies.txt"):
+        command.insert(2, "--cookies")
+        command.insert(3, "/mnt/data/cookies.txt")
+
+    result = subprocess.run(command, capture_output=True, text=True)
+
+    if result.returncode == 0:
+        return result.stdout.strip()
+    else:
+        logging.error(f"Error extracting YouTube audio: {result.stderr}")
+        return None
+except Exception as e:
+    logging.exception("Exception while extracting YouTube audio")
     return None
 
-# -----------------------
-# Background refresh
-# -----------------------
-def refresh_youtube():
-    while True:
-        for name, url in YOUTUBE_STREAMS.items():
-            hls = get_youtube_live_url(url)
-            if hls:
-                CACHE[name] = hls
-                LIVE_STATUS[name] = True
+def refresh_stream_urls(): """Refresh all stream URLs every 30 minutes.""" last_update = {}
+
+while True:
+    logging.info("🔄 Refreshing stream URLs...")
+
+    for name, yt_url in YOUTUBE_STREAMS.items():
+        now = time.time()
+        if name not in last_update or now - last_update[name] > 1800:
+            url = get_youtube_audio_url(yt_url)
+            if url:
+                CACHE[name] = url
+                last_update[name] = now
+                logging.info(f"✅ Updated {name}: {url}")
             else:
-                LIVE_STATUS[name] = False
-        time.sleep(60)
+                logging.warning(f"❌ Failed to update {name}")
 
-threading.Thread(target=refresh_youtube, daemon=True).start()
+    time.sleep(60)  # Check every minute
 
-# -----------------------
-# Home
-# -----------------------
-@app.route("/")
-def home():
-    tv = list(TV_STREAMS.keys())
-    yt = [k for k, v in LIVE_STATUS.items() if v]
+Start background thread
 
-    html = """
-<html>
-<body style="background:#111;color:white;font-family:sans-serif">
-<h2>TV</h2>
-{% for c in tv %}
-<a href="/watch/{{c}}">{{c}}</a><br>
-{% endfor %}
-<h2>YouTube Live</h2>
-{% for c in yt %}
-<a href="/watch/{{c}}">{{c}}</a><br>
-{% endfor %}
-</body>
-</html>
-"""
-    return render_template_string(html, tv=tv, yt=yt)
+threading.Thread(target=refresh_stream_urls, daemon=True).start() def generate_stream(url): """Streams audio using FFmpeg and auto-reconnects.""" while True: process = subprocess.Popen( [ "ffmpeg", "-reconnect", "1", "-reconnect_streamed", "1", "-reconnect_delay_max", "10", "-timeout", "5000000", "-user_agent", "Mozilla/5.0", "-i", url, "-vn", "-ac", "1", "-b:a", "40k", "-bufsize", "1M", "-f", "mp3", "-" ], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, bufsize=4096 )
 
-# -----------------------
-# Watch
-# -----------------------
-@app.route("/watch/<channel>")
-def watch(channel):
-    if channel in TV_STREAMS:
-        video_url = TV_STREAMS[channel]
-    elif channel in CACHE:
-        video_url = CACHE[channel]
-    else:
-        abort(404)
+logging.info(f"🎵 Streaming from: {url}")
 
-    return f"""
-<html>
-<head>
-<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-</head>
-<body style="background:black">
-<video id="v" controls autoplay muted style="width:100%"></video>
-<script>
-var v=document.getElementById("v");
-if(v.canPlayType("application/vnd.apple.mpegurl")) {{
-  v.src="{video_url}";
-}} else if(Hls.isSupported()) {{
-  var h=new Hls();
-  h.loadSource("{video_url}");
-  h.attachMedia(v);
-}}
-</script>
-</body>
-</html>
-"""
+    try:
+        for chunk in iter(lambda: process.stdout.read(4096), b""):
+            yield chunk
+            time.sleep(0.02)  # Slight delay helps reduce CPU spikes and avoid buffer overrun
+    except GeneratorExit:
+        logging.info("❌ Client disconnected. Stopping FFmpeg process...")
+        process.terminate()
+        process.wait()
+        break
+    except Exception as e:
+        logging.error(f"Stream error: {e}")
 
-# -----------------------
-# Run
-# -----------------------
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8000)
+    logging.warning("⚠️ FFmpeg stopped, restarting stream...")
+    process.terminate()
+    process.wait()
+    time.sleep(5)
+
+@app.route("/<station_name>") def stream(station_name): """Serve the requested station as a live stream.""" url = CACHE.get(station_name)
+
+if not url:
+    return "Station not found or not available", 404
+
+return Response(generate_stream(url), mimetype="audio/mpeg")
+
+if name == "main": app.run(host="0.0.0.0", port=8000, debug=False)
