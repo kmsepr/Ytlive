@@ -48,17 +48,17 @@ CACHE = {}
 # Extract YouTube audio URL
 # -------------------------------------------------
 def get_youtube_audio_url(youtube_url):
-    """Extracts direct audio stream URL from YouTube Live."""
     try:
-        command = ["/usr/local/bin/yt-dlp", "-f", "91", "-g", youtube_url]
-
-        if os.path.exists("/mnt/data/cookies.txt"):
-            command.insert(2, "--cookies")
-            command.insert(3, "/mnt/data/cookies.txt")
+        command = [
+            "/usr/local/bin/yt-dlp",
+            "-f", "bestaudio",
+            "-g",
+            youtube_url
+        ]
 
         result = subprocess.run(command, capture_output=True, text=True)
 
-        if result.returncode == 0:
+        if result.returncode == 0 and result.stdout.strip():
             return result.stdout.strip()
         else:
             logging.error(f"yt-dlp error: {result.stderr}")
