@@ -52,7 +52,7 @@ def get_youtube_audio_url(youtube_url):
         command = [
             "/usr/local/bin/yt-dlp",
             "--cookies", "/mnt/data/cookies.txt",
-            "-f", "bestaudio",
+            "-f", "91",
             "-g",
             youtube_url
         ]
