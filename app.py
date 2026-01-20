@@ -51,6 +51,7 @@ def get_youtube_audio_url(youtube_url):
     try:
         command = [
             "/usr/local/bin/yt-dlp",
+            "--cookies", "/mnt/data/cookies.txt",
             "-f", "bestaudio",
             "-g",
             youtube_url
@@ -67,7 +68,6 @@ def get_youtube_audio_url(youtube_url):
     except Exception:
         logging.exception("Exception while extracting YouTube audio")
         return None
-
 # -------------------------------------------------
 # Refresh stream URLs every 30 minutes
 # -------------------------------------------------
