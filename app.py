@@ -168,8 +168,8 @@ window.onload=()=>showTab('tv');
 <div class="card">
     <img src="{{ logos.get(key) }}">
     <span>{{ key.replace('_',' ').title() }}</span><br>
-    <a href="/watch/{{ key }}" style="color:#0ff;">▶</a> |
-<a href="/audio/{{ key }}" style="color:#ff0;">🎵</a>
+    <a href="/watch/{{ key }}" style="color:#0ff;">Video</a> |
+<a href="/audio/{{ key }}" style="color:#ff0;">Audio</a>
 </div>
 {% endfor %}
 </div>
@@ -179,8 +179,8 @@ window.onload=()=>showTab('tv');
 <div class="card">
     <img src="{{ logos.get(key) }}">
     <span>{{ key.replace('_',' ').title() }}</span><br>
-    <a href="/watch/{{ key }}" style="color:#0ff;">Watch</a> |
-    <a href="/audio/{{ key }}" style="color:#ff0;">🎵</a>
+    <a href="/watch/{{ key }}" style="color:#0ff;">Video</a> |
+    <a href="/audio/{{ key }}" style="color:#ff0;">Audio</a>
 </div>
 {% endfor %}
 </div>
