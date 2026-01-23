@@ -1,8 +1,9 @@
-import import time
+import time
 import threading
 import logging
 from flask import Flask, Response, render_template_string, abort
 import subprocess, os, requests
+
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 app = Flask(__name__)
