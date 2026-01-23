@@ -15,10 +15,13 @@ TV_STREAMS = {
 "victers_tv": "https://932y4x26ljv8-hls-live.5centscdn.com/victers/tv.stream/chunks.m3u8",
 
     "safari_tv": "https://j78dp346yq5r-hls-live.5centscdn.com/safari/live.stream/chunks.m3u8",
-"kairali_we": "https://cdn-3.pishow.tv/live/1530/master.m3u8",
 
 "bloomberg_tv": "https://bloomberg-bloomberg-3-br.samsung.wurl.tv/manifest/playlist.m3u8",
     "france_24": "https://live.france24.com/hls/live/2037218/F24_EN_HI_HLS/master_500.m3u8",
+
+"kairali_we": "https://cdn-3.pishow.tv/live/1530/master.m3u8",
+
+
 "amrita_tv": "https://ddash74r36xqp.cloudfront.net/master.m3u8",
 
 "mazhavil_manorama": "https://yuppmedtaorire.akamaized.net/v1/master/a0d007312bfd99c47f76b77ae26b1ccdaae76cb1/mazhavilmanorama_nim_https/050522/mazhavilmanorama/playlist.m3u8",
