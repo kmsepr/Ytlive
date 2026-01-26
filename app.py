@@ -42,6 +42,7 @@ CHANNEL_LOGOS = {k: "https://upload.wikimedia.org/wikipedia/commons/b/b8/YouTube
 
 CACHE = {}
 LIVE_STATUS = {}
+COOKIES_FILE = "/mnt/data/cookies.txt"
 
 # -----------------------
 # YouTube URL extractor (modern)
@@ -50,6 +51,7 @@ def get_youtube_hls(youtube_url: str):
     cmd = [
         "yt-dlp",
         "--no-playlist",
+        "--cookies", COOKIES_FILE,
         "--geo-bypass",
         "--geo-bypass-country", "IN",
         "--user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
@@ -60,25 +62,31 @@ def get_youtube_hls(youtube_url: str):
         youtube_url
     ]
 
+    if not os.path.exists(COOKIES_FILE):
+        logging.error("❌ cookies.txt NOT FOUND at /mnt/data/cookies.txt")
+        return None
+
     try:
         p = subprocess.run(
             cmd,
             capture_output=True,
             text=True,
-            timeout=25
+            timeout=30
         )
 
         if p.returncode == 0 and p.stdout.strip():
+            logging.info("✅ YouTube URL extracted successfully")
             return p.stdout.strip()
 
-        logging.warning(
-            f"YouTube blocked or unavailable: {youtube_url}\n{p.stderr}"
+        logging.error(
+            f"❌ yt-dlp failed for {youtube_url}\nSTDERR:\n{p.stderr}"
         )
 
     except Exception as e:
-        logging.error(f"yt-dlp exception: {e}")
+        logging.exception(f"yt-dlp exception: {e}")
 
     return None
+
 
 # -----------------------
 # Background refresher (IMPORTANT)
