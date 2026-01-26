@@ -49,20 +49,34 @@ LIVE_STATUS = {}
 def get_youtube_hls(youtube_url: str):
     cmd = [
         "yt-dlp",
+        "--no-playlist",
+        "--geo-bypass",
+        "--geo-bypass-country", "IN",
+        "--user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+        "--add-header", "Accept-Language:en-US,en;q=0.9",
+        "--extractor-retries", "3",
         "-f", "best[protocol^=m3u8]/best",
         "-g",
-        "--no-playlist",
         youtube_url
     ]
 
     try:
-        p = subprocess.run(cmd, capture_output=True, text=True, timeout=20)
+        p = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=25
+        )
+
         if p.returncode == 0 and p.stdout.strip():
             return p.stdout.strip()
-        else:
-            logging.warning(f"YouTube offline or blocked: {youtube_url}")
+
+        logging.warning(
+            f"YouTube blocked or unavailable: {youtube_url}\n{p.stderr}"
+        )
+
     except Exception as e:
-        logging.error(f"yt-dlp failed: {e}")
+        logging.error(f"yt-dlp exception: {e}")
 
     return None
 
