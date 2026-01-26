@@ -1,12 +1,16 @@
 FROM python:3.11-slim
 
 # -----------------------------
-# Set working directory
+# Environment
 # -----------------------------
+ENV PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    DEBIAN_FRONTEND=noninteractive
+
 WORKDIR /app
 
 # -----------------------------
-# Install system dependencies
+# System dependencies
 # -----------------------------
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
@@ -14,26 +18,37 @@ RUN apt-get update && \
         curl \
         ca-certificates \
         git \
-        build-essential && \
+        tini && \
     rm -rf /var/lib/apt/lists/*
 
 # -----------------------------
-# Upgrade pip and install Python dependencies
+# Python dependencies
 # -----------------------------
-RUN pip install --no-cache-dir --upgrade pip
-RUN pip install --no-cache-dir flask requests yt-dlp gunicorn
+RUN pip install --upgrade pip && \
+    pip install flask requests yt-dlp gunicorn
 
 # -----------------------------
-# Copy application code
+# Copy app
 # -----------------------------
 COPY . /app
 
 # -----------------------------
-# Expose port
+# Expose
 # -----------------------------
 EXPOSE 8000
 
 # -----------------------------
-# Start Gunicorn with 2 workers and 2 threads
+# Use tini (VERY IMPORTANT for ffmpeg)
 # -----------------------------
-CMD ["gunicorn", "-w", "2", "--threads", "2", "-b", "0.0.0.0:8000", "app:app"]
+ENTRYPOINT ["/usr/bin/tini", "--"]
+
+# -----------------------------
+# Gunicorn (stream-friendly)
+# -----------------------------
+CMD ["gunicorn", \
+     "-w", "4", \
+     "--threads", "4", \
+     "--worker-class", "gthread", \
+     "--timeout", "0", \
+     "-b", "0.0.0.0:8000", \
+     "app:app"]
