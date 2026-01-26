@@ -3,8 +3,12 @@ import threading
 import logging
 import subprocess
 import os
+
 from flask import Flask, Response, render_template_string, abort
 
+# -----------------------
+# Basic setup
+# -----------------------
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s"
@@ -12,8 +16,10 @@ logging.basicConfig(
 
 app = Flask(__name__)
 
+COOKIES_FILE = "/mnt/data/cookies.txt"
+
 # -----------------------
-# TV Streams (direct m3u8)
+# TV Streams (direct HLS)
 # -----------------------
 TV_STREAMS = {
     "victers_tv": "https://932y4x26ljv8-hls-live.5centscdn.com/victers/tv.stream/chunks.m3u8",
@@ -22,9 +28,6 @@ TV_STREAMS = {
     "france_24": "https://live.france24.com/hls/live/2037218/F24_EN_HI_HLS/master_500.m3u8",
     "kairali_we": "https://cdn-3.pishow.tv/live/1530/master.m3u8",
     "amrita_tv": "https://ddash74r36xqp.cloudfront.net/master.m3u8",
-    "mazhavil_manorama": "https://yuppmedtaorire.akamaized.net/v1/master/a0d007312bfd99c47f76b77ae26b1ccdaae76cb1/mazhavilmanorama_nim_https/050522/mazhavilmanorama/playlist.m3u8",
-    "dd_sports": "https://cdn-6.pishow.tv/live/13/master.m3u8",
-    "dd_malayalam": "https://d3eyhgoylams0m.cloudfront.net/v1/manifest/93ce20f0f52760bf38be911ff4c91ed02aa2fd92/ed7bd2c7-8d10-4051-b397-2f6b90f99acb/562ee8f9-9950-48a0-ba1d-effa00cf0478/2.m3u8",
 }
 
 # -----------------------
@@ -37,34 +40,42 @@ YOUTUBE_STREAMS = {
     "xylem_psc": "https://www.youtube.com/@XylemPSC/live",
 }
 
-CHANNEL_LOGOS = {k: "https://upload.wikimedia.org/wikipedia/commons/b/b8/YouTube_Logo_2017.svg"
-                 for k in YOUTUBE_STREAMS}
-
-CACHE = {}
-LIVE_STATUS = {}
-COOKIES_FILE = "/mnt/data/cookies.txt"
+# -----------------------
+# Logos (UI unchanged)
+# -----------------------
+CHANNEL_LOGOS = {
+    **{k: "https://upload.wikimedia.org/wikipedia/commons/b/b8/YouTube_Logo_2017.svg"
+       for k in YOUTUBE_STREAMS}
+}
 
 # -----------------------
-# YouTube URL extractor (modern)
+# Runtime cache
 # -----------------------
-def get_youtube_hls(youtube_url: str):
+CACHE = {}        # channel -> hls url
+LIVE_STATUS = {}  # channel -> bool
+
+# -----------------------
+# yt-dlp extractor (CLOUD SAFE)
+# -----------------------
+def get_youtube_hls(url: str):
+    if not os.path.exists(COOKIES_FILE):
+        logging.error("❌ cookies.txt missing at /mnt/data/cookies.txt")
+        return None
+
     cmd = [
         "yt-dlp",
-        "--no-playlist",
         "--cookies", COOKIES_FILE,
+        "--no-playlist",
         "--geo-bypass",
         "--geo-bypass-country", "IN",
         "--user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
         "--add-header", "Accept-Language:en-US,en;q=0.9",
+        "--add-header", "Referer:https://www.youtube.com/",
         "--extractor-retries", "3",
         "-f", "best[protocol^=m3u8]/best",
         "-g",
-        youtube_url
+        url
     ]
-
-    if not os.path.exists(COOKIES_FILE):
-        logging.error("❌ cookies.txt NOT FOUND at /mnt/data/cookies.txt")
-        return None
 
     try:
         p = subprocess.run(
@@ -75,23 +86,21 @@ def get_youtube_hls(youtube_url: str):
         )
 
         if p.returncode == 0 and p.stdout.strip():
-            logging.info("✅ YouTube URL extracted successfully")
             return p.stdout.strip()
 
-        logging.error(
-            f"❌ yt-dlp failed for {youtube_url}\nSTDERR:\n{p.stderr}"
-        )
+        logging.warning(f"YouTube blocked/offline: {url}\n{p.stderr}")
 
     except Exception as e:
         logging.exception(f"yt-dlp exception: {e}")
 
     return None
 
-
 # -----------------------
-# Background refresher (IMPORTANT)
+# Background refresh (SINGLE)
 # -----------------------
 def refresh_youtube():
+    logging.info("🍪 cookies.txt exists: %s", os.path.exists(COOKIES_FILE))
+
     while True:
         logging.info("🔄 Refreshing YouTube live streams")
         for name, url in YOUTUBE_STREAMS.items():
@@ -99,14 +108,18 @@ def refresh_youtube():
             if hls:
                 CACHE[name] = hls
                 LIVE_STATUS[name] = True
+                logging.info(f"✅ {name} LIVE")
             else:
                 LIVE_STATUS[name] = False
-        time.sleep(45)   # YouTube URLs expire FAST
+        time.sleep(45)  # MUST be < YouTube expiry
 
-threading.Thread(target=refresh_youtube, daemon=True).start()
+# ensure only one refresh thread (gunicorn-safe)
+if os.environ.get("YT_REFRESH_STARTED") != "1":
+    os.environ["YT_REFRESH_STARTED"] = "1"
+    threading.Thread(target=refresh_youtube, daemon=True).start()
 
 # -----------------------
-# Home (UI UNCHANGED)
+# Home (UI unchanged)
 # -----------------------
 @app.route("/")
 def home():
@@ -167,11 +180,14 @@ window.onload=()=>showTab('tv');
 </html>
 """
     return render_template_string(
-        html, tv=tv_channels, yt=yt_live, logos=CHANNEL_LOGOS
+        html,
+        tv=tv_channels,
+        yt=yt_live,
+        logos=CHANNEL_LOGOS
     )
 
 # -----------------------
-# Watch
+# Watch (TV direct, YouTube direct HLS)
 # -----------------------
 @app.route("/watch/<channel>")
 def watch(channel):
@@ -183,6 +199,7 @@ def watch(channel):
         abort(404)
 
     return f"""
+<!DOCTYPE html>
 <html>
 <head>
 <title>{channel}</title>
@@ -201,7 +218,7 @@ else if(Hls.isSupported()){{let h=new Hls();h.loadSource(src);h.attachMedia(v);}
 """
 
 # -----------------------
-# Audio (TV + YouTube)
+# Audio (TV + YouTube via ffmpeg)
 # -----------------------
 @app.route("/audio/<channel>")
 def audio(channel):
@@ -238,7 +255,7 @@ def audio(channel):
     return Response(gen(), mimetype="audio/aac")
 
 # -----------------------
-# Run
+# Run (local only)
 # -----------------------
 if __name__ == "__main__":
     app.run("0.0.0.0", 8000)
