@@ -1,54 +1,55 @@
 FROM python:3.11-slim
 
 # -----------------------------
-# Environment
+# Environment (important)
 # -----------------------------
-ENV PYTHONUNBUFFERED=1 \
-    PIP_NO_CACHE_DIR=1 \
-    DEBIAN_FRONTEND=noninteractive
-
-WORKDIR /app
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
 
 # -----------------------------
 # System dependencies
 # -----------------------------
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-        ffmpeg \
-        curl \
-        ca-certificates \
-        git \
-        tini && \
-    rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ffmpeg \
+    curl \
+    ca-certificates \
+    git \
+    build-essential \
+ && rm -rf /var/lib/apt/lists/*
+
+# -----------------------------
+# Working directory
+# -----------------------------
+WORKDIR /app
 
 # -----------------------------
 # Python dependencies
 # -----------------------------
-RUN pip install --upgrade pip && \
-    pip install flask requests yt-dlp gunicorn
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir \
+        flask \
+        requests \
+        yt-dlp \
+        gunicorn
 
 # -----------------------------
-# Copy app
+# Application files
 # -----------------------------
 COPY . /app
 
 # -----------------------------
-# Expose
+# Cookies mount location
+# (Koyeb / Docker volume)
+# -----------------------------
+RUN mkdir -p /mnt/data
+
+# -----------------------------
+# Expose port
 # -----------------------------
 EXPOSE 8000
 
 # -----------------------------
-# Use tini (VERY IMPORTANT for ffmpeg)
+# Start server
+# IMPORTANT: 1 worker only (YouTube!)
 # -----------------------------
-ENTRYPOINT ["/usr/bin/tini", "--"]
-
-# -----------------------------
-# Gunicorn (stream-friendly)
-# -----------------------------
-CMD ["gunicorn", \
-     "-w", "4", \
-     "--threads", "4", \
-     "--worker-class", "gthread", \
-     "--timeout", "0", \
-     "-b", "0.0.0.0:8000", \
-     "app:app"]
+CMD ["gunicorn", "-w", "1", "--threads", "8", "-b", "0.0.0.0:8000", "app:app"]
