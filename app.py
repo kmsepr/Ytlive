@@ -3,6 +3,7 @@ import threading
 import logging
 from flask import Flask, Response, render_template_string, abort
 import subprocess, os, requests
+from flask import request
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 app = Flask(__name__)
@@ -234,6 +235,67 @@ document.addEventListener("keydown", function(e) {{
 </body>
 </html>"""
     return html
+
+@app.route("/youtube-audio", methods=["GET", "POST"])
+def youtube_audio():
+    if request.method == "GET":
+        return """
+        <html>
+        <head>
+        <title>YouTube Live → Audio</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+        body { background:#111; color:#fff; font-family:sans-serif; text-align:center; padding:20px; }
+        input { width:90%; padding:10px; font-size:16px; }
+        button { padding:10px 20px; font-size:16px; margin-top:10px; }
+        </style>
+        </head>
+        <body>
+        <h2>▶ YouTube Live → 🎵 Audio</h2>
+        <form method="POST">
+            <input name="url" placeholder="Paste YouTube LIVE URL here" required>
+            <br>
+            <button type="submit">Get Audio</button>
+        </form>
+        </body>
+        </html>
+        """
+
+    youtube_url = request.form.get("url")
+    if not youtube_url:
+        return "No URL provided", 400
+
+    def generate():
+        # Get direct stream URL
+        cmd1 = ["yt-dlp", "-f", "bestaudio", "-g", youtube_url]
+        p1 = subprocess.run(cmd1, capture_output=True, text=True)
+        if p1.returncode != 0:
+            return
+
+        stream_url = p1.stdout.strip()
+
+        # Convert to MP3 live
+        cmd2 = [
+            "ffmpeg",
+            "-i", stream_url,
+            "-vn",
+            "-ac", "1",
+            "-b:a", "48k",
+            "-f", "mp3",
+            "pipe:1"
+        ]
+        proc = subprocess.Popen(cmd2, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+
+        try:
+            while True:
+                data = proc.stdout.read(1024)
+                if not data:
+                    break
+                yield data
+        finally:
+            proc.terminate()
+
+    return Response(generate(), mimetype="audio/mpeg")
 
 # -----------------------
 # Proxy Stream
